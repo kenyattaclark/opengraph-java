@@ -1,17 +1,14 @@
 package opengraph;
 
-import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Hashtable;
 import java.util.Set;
 
 import org.htmlcleaner.HtmlCleaner;
 import org.htmlcleaner.TagNode;
-
-import java.net.URL;
-import java.net.URLConnection;
 
 /**
  * A Java object representation of an Open Graph enabled webpage
