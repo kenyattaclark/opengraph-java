@@ -4,7 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Set;
 
 import org.htmlcleaner.HtmlCleaner;
@@ -12,23 +12,23 @@ import org.htmlcleaner.TagNode;
 
 /**
  * A Java object representation of an Open Graph enabled webpage
- * A simplified layer over a Hastable
+ * A simplified layer over a HashMap
  * @author Callum Jones
  */
 public class OpenGraph {
     private String pageUrl;
-    private Hashtable<String, String> metaAttributes;
+    private HashMap<String, String> metaAttributes;
     private String baseType;
     private boolean isImported; //determine if the object is a new incarnation or representation of a web page
     private boolean hasChanged; //track if object has been changed
 
     public final static String[] REQUIRED_META = new String[]{"title", "type", "image", "url" };
     
-    public final static Hashtable<String, String[]> BASE_TYPES = new Hashtable<String, String[]>();
+    public final static HashMap<String, String[]> BASE_TYPES = new HashMap<String, String[]>();
        static {
-		BASE_TYPES.put("activity", new String[] {"activity", "sport"});
-		BASE_TYPES.put("business", new String[] {"bar", "company", "cafe", "hotel", "restaurant"});
-		BASE_TYPES.put("group", new String[] {"cause", "sports_league", "sports_team"});
+				BASE_TYPES.put("activity", new String[] {"activity", "sport"});
+				BASE_TYPES.put("business", new String[] {"bar", "company", "cafe", "hotel", "restaurant"});
+				BASE_TYPES.put("group", new String[] {"cause", "sports_league", "sports_team"});
                 BASE_TYPES.put("organization", new String[] {"band", "government", "non_profit", "school", "university"});
                 BASE_TYPES.put("person", new String[] {"actor", "athlete", "author", "director", "musician", "politician", "profile", "public_figure"});
                 BASE_TYPES.put("place", new String[] {"city", "country", "landmark", "state_province"});
@@ -40,7 +40,7 @@ public class OpenGraph {
     * Create an open graph representation for generating your own Open Graph object
     */
     public OpenGraph() {
-        metaAttributes = new Hashtable<String, String>();
+        metaAttributes = new HashMap<String, String>();
         hasChanged = false;
         isImported = false;
     }
@@ -216,10 +216,10 @@ public class OpenGraph {
     }
 
     /**
-     * Obtain the underlying HashTable
-     * @return The underlying structure as a Hashtable
+     * Obtain the underlying HashMap
+     * @return The underlying structure as a HashMap
      */
-    public Hashtable<String, String> exposeTable() {
+    public HashMap<String, String> exposeTable() {
         return metaAttributes;
     }
 
@@ -232,7 +232,7 @@ public class OpenGraph {
     }
 
     /**
-     * Test if the object has been modified by setters/deleters. This is only relevant if this object initally represented a web page
+     * Test if the object has been modified by setters/deleters. This is only relevant if this object initially represented a web page
      * @return True True if the object has been modified, false otherwise
      */
     public boolean hasChanged() {
