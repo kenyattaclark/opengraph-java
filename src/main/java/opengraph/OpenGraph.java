@@ -1,12 +1,15 @@
 package opengraph;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.htmlcleaner.HtmlCleaner;
 import org.htmlcleaner.TagNode;
 
@@ -21,6 +24,7 @@ public class OpenGraph {
     private String baseType;
     private boolean isImported; //determine if the object is a new incarnation or representation of a web page
     private boolean hasChanged; //track if object has been changed
+    private String domain;
 
     public final static String[] REQUIRED_META = new String[]{"title", "type", "image", "url" };
     
@@ -61,6 +65,7 @@ public class OpenGraph {
         
         //download the (X)HTML content, but only up to the closing head tag. We do not want to waste resources parsing irrelevant content
         URL pageURL = new URL(url);
+        domain = pageURL.getHost();
         URLConnection siteConnection = pageURL.openConnection();
         BufferedReader dis = new BufferedReader(new InputStreamReader(siteConnection.getInputStream()));
         String inputLine;
@@ -68,12 +73,6 @@ public class OpenGraph {
 
         //Loop through each line, looking for the closing head element
         while ((inputLine = dis.readLine()) != null) {
-            if (inputLine.contains("</head>")) {
-                inputLine = inputLine.substring(0, inputLine.indexOf("</head>") + 7);
-                inputLine = inputLine.concat("<body></body></html>");
-                headContents.append(inputLine + "\r\n");
-                break;
-            }
             headContents.append(inputLine + "\r\n");     
         }
 
@@ -84,10 +83,11 @@ public class OpenGraph {
         //open only the meta tags
         TagNode[] metaData = pageData.getElementsByName("meta", true);
         for (TagNode metaElement : metaData) {
-            if (metaElement.hasAttribute("property") && metaElement.getAttributeByName("property").startsWith("og:"))
+            if (metaElement.hasAttribute("property") && metaElement.getAttributeByName("property").startsWith("og:")) {
                 metaAttributes.put(metaElement.getAttributeByName("property").replaceFirst("og:", ""), metaElement.getAttributeByName("content"));
-            else if (metaElement.hasAttribute("name") && metaElement.getAttributeByName("name").startsWith("og:"))
+            } else if (metaElement.hasAttribute("name") && metaElement.getAttributeByName("name").startsWith("og:")) {
                 metaAttributes.put(metaElement.getAttributeByName("name").replaceFirst("og:", ""), metaElement.getAttributeByName("content"));
+            }
         }
 
         /**
@@ -95,8 +95,9 @@ public class OpenGraph {
          */
         if (!ignoreSpecErrors) {
             for (String req : REQUIRED_META) {
-                if (!metaAttributes.containsKey(req))
+                if (!metaAttributes.containsKey(req)) {
                     throw new Exception("Does not conform to Open Graph protocol");
+                }
             }
         }
 
@@ -116,11 +117,101 @@ public class OpenGraph {
             }
             if (finished) break;
         }
-
-
+        
+        checkTitle(pageData);
+        checkDescription(pageData);
+        checkImage(pageData);
     }
 
-    /**
+	private void checkImage(final TagNode pageData) {
+		if (StringUtils.isBlank(getContent("image"))) {
+			metaAttributes.put("image", "http://www.getfavicon.org/?url=" + domain + "/favicon.30.png");
+		}
+	}
+
+	private void checkDescription(final TagNode pageData) {
+		if (StringUtils.isBlank(getContent("description"))) {
+			mineDescription(pageData);
+		}
+	}
+
+	private void mineDescription(final TagNode pageData) {
+		searchDescriptionInMetaTags(pageData);
+		
+		if (StringUtils.isBlank(getContent("description"))) {
+			searchDescriptionInPTags(pageData);
+		}
+		
+		if (StringUtils.isBlank(getContent("description"))) {
+			searchDescriptionInDivTags(pageData);
+		}
+	}
+
+	private void searchDescriptionInDivTags(final TagNode pageData) {
+		@SuppressWarnings("unchecked")
+		List<TagNode> tags = pageData.getElementListByName("div", true);
+		for (TagNode tag : tags) {
+			metaAttributes.put("description", tag.getText().toString());
+			break;
+		}
+	}
+
+	private void searchDescriptionInMetaTags(final TagNode pageData) {
+		@SuppressWarnings("unchecked")
+		List<TagNode> tags = pageData.getElementListByName("meta", true);
+		for (TagNode tag : tags) {
+			if (StringUtils.equalsIgnoreCase("description", tag.getAttributeByName("name"))) {
+				metaAttributes.put("description", tag.getAttributeByName("content"));
+				return;
+			}
+		}
+	}
+
+	private void searchDescriptionInPTags(final TagNode pageData) {
+		@SuppressWarnings("unchecked")
+		List<TagNode> tags = pageData.getElementListByName("p", true);
+		for (TagNode tag : tags) {
+			metaAttributes.put("description", tag.getText().toString());
+			break;
+		}
+	}
+
+	private void checkTitle(final TagNode pageData) {
+		if (StringUtils.isBlank(getContent("title"))) {
+			mineTitle(pageData);
+    	}
+	}
+
+	private void mineTitle(final TagNode pageData) {
+		searchTitleTags(pageData);
+		if (StringUtils.isBlank(getContent("title"))) {
+			searchH1Tags(pageData);
+		}
+	}
+	
+	private void searchH1Tags(final TagNode pageData) {
+		@SuppressWarnings("unchecked")
+		final List<TagNode> tags = pageData.getElementListByName("h1", false);
+		for (TagNode tag : tags) {
+			if (StringUtils.isNotBlank(tag.getText())) {
+				metaAttributes.put("title", tag.getText().toString());
+				return;
+			} 
+		}
+	}
+
+	private void searchTitleTags(final TagNode pageData) {
+		@SuppressWarnings("unchecked")
+		final List<TagNode> tags = pageData.getElementListByName("title", true);
+		for (TagNode tag : tags) {
+			if (StringUtils.isNotBlank(tag.getText())) {
+				metaAttributes.put("title", tag.getText().toString());
+				return;
+			} 
+		}
+	}
+
+	/**
      * Get the basic type of the Open graph page as per the specification
      * @return Base type is defined by specification, null otherwise
      */
@@ -238,4 +329,13 @@ public class OpenGraph {
     public boolean hasChanged() {
         return hasChanged;
     }
+    
+    public static void main(String[] args) throws IOException, Exception {
+		OpenGraph og = new OpenGraph("http://www.thedailybeast.com/articles/2011/08/15/iowa-straw-poll-republican-field-faces-tough-test-in-rust-belt.html", true);
+		System.out.println("Title: " + og.getContent("title"));
+		System.out.println("Description: " + og.getContent("description"));
+		System.out.println("Image: " + og.getContent("image"));
+		System.out.println("Content?: " + og.getContent("content"));
+	}
+    
 }
