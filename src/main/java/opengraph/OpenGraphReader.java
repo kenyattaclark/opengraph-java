@@ -35,13 +35,14 @@ public class OpenGraphReader {
     
     /**
      * Fetch the open graph representation from a web site
-     * @param url The address to the web page to fetch Open Graph data
+     * @param link The address to the web page to fetch Open Graph data
      * @param ignoreSpecificationErrors Set this option to true if you don't wish to have an exception throw if the page does not conform to the basic 4 attributes
      * @throws java.io.IOException If a network error occurs, the HTML parser will throw an IO Exception
      * @throws java.lang.Exception A generic exception is throw if the specific page fails to conform to the basic Open Graph standard as define by the constant REQUIRED_META
      */
-    public OpenGraph read(final String url) throws java.io.IOException, Exception {
-    	final TagNode nodes = new HtmlCleaner().clean(new URL(url));
+    public OpenGraph read(final String link) throws java.io.IOException, Exception {
+    	final URL url = new URL(link);
+		final TagNode nodes = new HtmlCleaner().clean(url);
         final HashMap<String, String> properties = new HashMap<String, String>();
         
         extractOpenGraphDataFromMetaTags(nodes.getElementsByName("meta", true), properties);
@@ -50,10 +51,10 @@ public class OpenGraphReader {
         if (mineExtraInformation) {
         	checkTitle(nodes, properties);
         	checkDescription(nodes, properties);
-//        	checkImage(nodes, properties);
+        	checkImage(nodes, url, properties);
         }
         
-        return new OpenGraph(url, properties);
+        return new OpenGraph(link, properties);
     }
 
 	private void extractOpenGraphDataFromMetaTags(final TagNode[] metaData, final HashMap<String, String> properties) {
@@ -83,11 +84,9 @@ public class OpenGraphReader {
 		}
 	}
 
-//	private static void checkImage(final TagNode pageData, final OpenGraph openGraph) {
-//		if (StringUtils.isBlank(getProperty("image"))) {
-//			openGraph.getProperties().put("image", "http://www.getfavicon.org/?url=" + domain + "/favicon.30.png");
-//		}
-//	}
+	private void checkImage(final TagNode nodes, final URL url, final Map<String, String> properties) {
+		properties.put("favicon", "http://www.getfavicon.org/?url=" + url.getHost() + "/favicon.71.png");
+	}
 
 	private void checkDescription(final TagNode nodes, final Map<String, String> properties) {
 		if (StringUtils.isBlank(properties.get("description"))) {
@@ -176,7 +175,7 @@ public class OpenGraphReader {
 
 	public static void main(String[] args) throws IOException, Exception {
 		OpenGraphReader reader = new OpenGraphReader();
-		OpenGraph openGraph = reader.read("http://slatest.slate.com/posts/2011/08/21/rick_perry_s_texas_jobs_boom_comes_from_big_government.html");
+		OpenGraph openGraph = reader.read("http://online.wsj.com/article/SB10001424053111903596904576514552877388610.html?mod=WSJ_Opinion_BelowLEFTSecond");
 		for (Entry<String, String> entry : openGraph.getProperties().entrySet()) {
 			System.out.println(entry.getKey() + ": " + entry.getValue());
 		}
